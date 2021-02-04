@@ -9,7 +9,7 @@ install.packages("R.utils")
 library(R.utils)
 bunzip2("Storm Data.bz2", destname = "Storm DataDes", remove = FALSE)
 data <- read.csv("Storm DataDES")
-
+################################################################################
 #Select relevant variables
 library(dplyr)
 
@@ -57,13 +57,8 @@ unique(antidata$EVTYPE)
 SelectedDataF1 <- SelectedData9311 %>% filter(INJURIES > 0 | FATALITIES > 0 |
                                                       PROPDMG > 0 | CROPDMG > 0) 
 
-# 3. we rid out of the events that happen less than 10 times -- good idea?
 
-
-# more10Events <- names(table(SelectedDataF1$EVTYPE)[table(SelectedDataF1$EVTYPE)> 10])
-
-
-
+################################################################################
 #### With amatch we can create a recategorization 
 
 # To lower
@@ -92,25 +87,10 @@ SelectedDataF1$EVTYPE <- gsub("(wet|dry) microburst|microburst","thunderstorm",S
 SelectedDataF1$EVTYPE <- gsub("moderate","",SelectedDataF1$EVTYPE) 
 SelectedDataF1$EVTYPE <- gsub("snow squalls","heavy snow",SelectedDataF1$EVTYPE) 
 SelectedDataF1$EVTYPE <- gsub("^smoke","dense smoke",SelectedDataF1$EVTYPE) 
-
-
 SelectedDataF1 <- SelectedDataF1[!grepl("late|unseason(.*)|prolong|mudslide|
                                             black|black ice|wall|summary|(.*)record(.*)|
                                             abnormal|blowing|glaze|other
                                             |precipitation|unusual|dry",SelectedDataF1$EVTYPE),]
-
-
-################################################################################
-grep("dry",SelectedDataF1$EVTYPE, value = TRUE)
-
-sort(table(SelectedDataF1$EVTYPE))
-
-f <- grep("snowfall",SelectedDataF1$EVTYPE)
-
-SelectedDataF1$EVTYPE[f[1]]
-d <- amatch(SelectedDataF1$EVTYPE[f[1]],categories,method = "jw", maxDist=20)
-categories[d]
-################################################################################
 
 
 categories <- c("Astronomical Low Tide", "Avalanche", "Blizzard", "Coastal Flood",
@@ -128,6 +108,24 @@ categories <- c("Astronomical Low Tide", "Avalanche", "Blizzard", "Coastal Flood
 categories <- tolower(categories)
 
 
+
+################################################################################
+grep("dry",SelectedDataF1$EVTYPE, value = TRUE)
+
+sort(table(SelectedDataF1$EVTYPE))
+
+f <- grep("snowfall",SelectedDataF1$EVTYPE)
+
+SelectedDataF1$EVTYPE[f[1]]
+d <- amatch(SelectedDataF1$EVTYPE[f[1]],categories,method = "jw", maxDist=20)
+categories[d]
+################################################################################
+
+
+
+
+
+
 # recategorization
 
 SelectedDataF1$TYPE <- sapply(SelectedDataF1$EVTYPE, function(x){
@@ -136,7 +134,6 @@ SelectedDataF1$TYPE <- sapply(SelectedDataF1$EVTYPE, function(x){
                 }
         ) 
 SelectedDataF1 <- SelectedDataF1 %>% relocate(TYPE, .after = EVTYPE)
-
 
 
 

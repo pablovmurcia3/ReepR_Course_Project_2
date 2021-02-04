@@ -9,7 +9,7 @@ install.packages("R.utils")
 library(R.utils)
 bunzip2("Storm Data.bz2", destname = "Storm DataDes", remove = FALSE)
 data <- read.csv("Storm DataDES")
-
+################################################################################
 #Select relevant variables
 library(dplyr)
 
@@ -49,7 +49,7 @@ sort(table(SelectedData9311$EVTYPE))
 
 
 
-
+################################################################################
 SelectedData9311$EVTYPE <- tolower(SelectedData9311$EVTYPE)
 
 
@@ -116,3 +116,17 @@ SelectedData9311$TYPE <- sapply(SelectedData9311$EVTYPE, function(x){
 ) 
 
 SelectedData9311 <- SelectedData9311 %>% relocate(TYPE, .after = EVTYPE)
+
+
+
+################################################################################
+sort(tapply(SelectedData9311$FATALITIES, SelectedData9311$TYPE, sum))
+sort(tapply(SelectedDataF1$FATALITIES, SelectedDataF1$TYPE, mean))
+################################################################################
+# Better option -- take the SelectedData9311 dataset
+# --- injuries -- boxplot 
+# --- fatalities -- bar
+
+
+################################################################################
+
