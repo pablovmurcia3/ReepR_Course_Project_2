@@ -13,9 +13,8 @@ data <- read.csv("Storm DataDES")
 #Select relevant variables
 library(dplyr)
 
-SelectedData <- data %>% select(STATE__,BGN_DATE,EVTYPE,LENGTH,WIDTH,MAG,
-                                 FATALITIES,INJURIES,PROPDMG,PROPDMGEXP,CROPDMG, 
-                                 CROPDMGEXP,WFO)
+SelectedData <- data %>% select(STATE__,BGN_DATE,EVTYPE,FATALITIES,INJURIES,
+                                PROPDMG,PROPDMGEXP,CROPDMG, CROPDMGEXP)
 
 ######## Some transformation #############
 # date
@@ -28,29 +27,25 @@ firstElement <- function(x){x[1]}
 library(lubridate)
 SelectedData$BGN_DATE <- year(mdy(sapply(splitNames,firstElement)))
 
-length(unique(SelectedData$BGN_DATE))
 ##### Events (EVTYpe) ############
-names(SelectedData)
-unique(SelectedData$EVTYPE)
-frecevents<-sort(table(data$EVTYPE))
+
 
 list <- split(SelectedData, SelectedData$BGN_DATE)
-
-numEvents <- function(x){length(unique(x[[3]]))} 
-numEventsyears <- sapply(list, numEvents)
+numEventsyears <- sapply(list, function(x){
+                length(unique(x[[3]]))
+                }
+        )
 numEventsyears
 
 #1. i will split the data (from 1960 t0 1992 - and form 1993 to 2011)
 
-SelectedData6092 <- filter(SelectedData, BGN_DATE <= 1992)
 SelectedData9311 <- filter(SelectedData, BGN_DATE > 1992)
 
-# As we can see, from 1960 to 1992 there are only 3 EVTYPE
-
-unique(SelectedData6092$EVTYPE)  #is it useful for the analysis? -- NOt!!!
 
 # As we can see, from 1960 to 1992 there are  many EVTYPE
-unique(SelectedData9311$EVTYPE)
+length(unique(SelectedData9311$EVTYPE))
+
+sort(table(SelectedData9311$EVTYPE))
 
 
 # 2. With the dataset from 1960 to 1992 I explore the events that caused at least 1 
@@ -91,11 +86,26 @@ SelectedDataF1$EVTYPE <- gsub("unseasonably warm and dry","heat",SelectedDataF1$
 SelectedDataF1$EVTYPE <- gsub("unseasonably warm","heat",SelectedDataF1$EVTYPE) 
 SelectedDataF1$EVTYPE <- gsub("^fog","dense fog",SelectedDataF1$EVTYPE) 
 SelectedDataF1$EVTYPE <- gsub("landslide","debris flow",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("landslide","debris flow",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("light ","winter ",SelectedDataF1$EVTYPE)
+SelectedDataF1$EVTYPE <- gsub("(wet|dry) microburst|microburst","thunderstorm",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("moderate","",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("snow squalls","heavy snow",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("^smoke","dense smoke",SelectedDataF1$EVTYPE) 
+
+
+SelectedDataF1 <- SelectedDataF1[!grepl("late|unseason(.*)|prolong|mudslide|
+                                            black|black ice|wall|summary|(.*)record(.*)|
+                                            abnormal|blowing|glaze|other
+                                            |precipitation|unusual|dry",SelectedDataF1$EVTYPE),]
+
 
 ################################################################################
+grep("dry",SelectedDataF1$EVTYPE, value = TRUE)
+
 sort(table(SelectedDataF1$EVTYPE))
 
-f <- grep("unseasonably warm",SelectedDataF1$EVTYPE, value = TRUE)
+f <- grep("snowfall",SelectedDataF1$EVTYPE)
 
 SelectedDataF1$EVTYPE[f[1]]
 d <- amatch(SelectedDataF1$EVTYPE[f[1]],categories,method = "jw", maxDist=20)
@@ -126,6 +136,13 @@ SelectedDataF1$TYPE <- sapply(SelectedDataF1$EVTYPE, function(x){
                 }
         ) 
 SelectedDataF1 <- SelectedDataF1 %>% relocate(TYPE, .after = EVTYPE)
+
+
+
+
+
+
+
 
 # gsub
 
