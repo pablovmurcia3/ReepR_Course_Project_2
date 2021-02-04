@@ -13,39 +13,34 @@ data <- read.csv("Storm DataDES")
 #Select relevant variables
 library(dplyr)
 
-SelectedData <- data %>% select(REFNUM,STATE__,BGN_DATE,EVTYPE,LENGTH,WIDTH,MAG,
+SelectedData <- data %>% select(STATE__,BGN_DATE,EVTYPE,LENGTH,WIDTH,MAG,
                                  FATALITIES,INJURIES,PROPDMG,PROPDMGEXP,CROPDMG, 
                                  CROPDMGEXP,WFO)
 
 ######## Some transformation #############
 # date
-SelectedData$BGN_DATE[1]
-SelectedData$BGN_DATE[902297]
 
-f <- grepl("0:00:00", SelectedData$BGN_DATE)
-length(f)
 
 splitNames <- strsplit(data$BGN_DATE,"\\ ")
+
 firstElement <- function(x){x[1]}
 
 library(lubridate)
 SelectedData$BGN_DATE <- year(mdy(sapply(splitNames,firstElement)))
 
-
-
-
-
-
+length(unique(SelectedData$BGN_DATE))
 ##### Events (EVTYpe) ############
 names(SelectedData)
 unique(SelectedData$EVTYPE)
 frecevents<-sort(table(data$EVTYPE))
 
+list <- split(SelectedData, SelectedData$BGN_DATE)
 
-table(filter(SelectedData,BGN_DATE == 1993)$EVTYPE)
+numEvents <- function(x){length(unique(x[[3]]))} 
+numEventsyears <- sapply(list, numEvents)
+numEventsyears
 
-
-# i will split the data (from 1960 t0 1992 - and form 1993 to 2011)
+#1. i will split the data (from 1960 t0 1992 - and form 1993 to 2011)
 
 SelectedData6092 <- filter(SelectedData, BGN_DATE <= 1992)
 SelectedData9311 <- filter(SelectedData, BGN_DATE > 1992)
@@ -57,12 +52,112 @@ unique(SelectedData6092$EVTYPE)  #is it useful for the analysis? -- NOt!!!
 # As we can see, from 1960 to 1992 there are  many EVTYPE
 unique(SelectedData9311$EVTYPE)
 
-sort(table(SelectedData9311$EVTYPE), decreasing = TRUE)[1:100]
 
-# With the dataset from 1960 to 1992 I explore the events that caused at least 1 
+# 2. With the dataset from 1960 to 1992 I explore the events that caused at least 1 
 # death or Injury
 
-SelectedDataF1 <- SelectedData9311 %>% filter(INJURIES > 0 | FATALITIES > 0) 
+antidata <- SelectedData9311 %>% filter(INJURIES == 0 & FATALITIES == 0) 
+unique(antidata$EVTYPE)
 
-unique(SelectedDataF1$EVTYPE)
+SelectedDataF1 <- SelectedData9311 %>% filter(INJURIES > 0 | FATALITIES > 0 |
+                                                      PROPDMG > 0 | CROPDMG > 0) 
+
+# 3. we rid out of the events that happen less than 10 times -- good idea?
+
+
+# more10Events <- names(table(SelectedDataF1$EVTYPE)[table(SelectedDataF1$EVTYPE)> 10])
+
+
+
+#### With amatch we can create a recategorization 
+
+# To lower
+
+SelectedDataF1$EVTYPE <- tolower(SelectedDataF1$EVTYPE)
+
+length(unique(SelectedDataF1$EVTYPE)) 
+
+# amatch
+# here's an example of amatch
+library("stringdist")
+
+
+## but first we need to fix some names that are badly categorized by amatch
+
+
+SelectedDataF1$EVTYPE <- gsub("tstm","thunderstorm",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("^wind","high winds",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("unseasonably warm and dry","heat",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("unseasonably warm","heat",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("^fog","dense fog",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("landslide","debris flow",SelectedDataF1$EVTYPE) 
+
+################################################################################
+sort(table(SelectedDataF1$EVTYPE))
+
+f <- grep("unseasonably warm",SelectedDataF1$EVTYPE, value = TRUE)
+
+SelectedDataF1$EVTYPE[f[1]]
+d <- amatch(SelectedDataF1$EVTYPE[f[1]],categories,method = "jw", maxDist=20)
+categories[d]
+################################################################################
+
+
+categories <- c("Astronomical Low Tide", "Avalanche", "Blizzard", "Coastal Flood",
+                "Cold/Wind Chill", "Debris Flow",  "Dense Fog", "Dense Smoke","Drought",
+                "Dust Devil", "Dust Storm","Excessive Heat","Extreme Cold/Wind Chill",
+                "Flash Flood","Flood","Frost/Freeze","Funnel Cloud", "Freezing Fog", 
+                "Hail","Heat" ,"Heavy Rain", "Heavy Snow" ,"High Surf" ,"High Wind",
+                "Hurricane/Typhoon","Ice Storm","Lake-Effect Snow","Lakeshore Flood",
+                "Lightning" ,"Marine Hail","Marine High Wind","Marine Strong Wind",
+                "Marine Thunderstorm Wind","Rip Current","Seiche","Sleet","Storm Surge/Tide",
+                "Strong Wind","Thunderstorm Wind","Tornado","Tropical Depression",
+                "Tropical Storm","Tsunami","Volcanic Ash","Waterspout","Wildfire", 
+                "Winter Storm","Winter Weather")
+
+categories <- tolower(categories)
+
+
+# recategorization
+
+SelectedDataF1$TYPE <- sapply(SelectedDataF1$EVTYPE, function(x){
+                i <- amatch(x,categories,method = "jw", maxDist=20)
+                categories[i]
+                }
+        ) 
+SelectedDataF1 <- SelectedDataF1 %>% relocate(TYPE, .after = EVTYPE)
+
+# gsub
+
+unique(grep("avalance", SelectedDataF1$EVTYPE))
+SelectedDataF1$EVTYPE <- gsub("avalance","avalanche",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("(.*)blizzard(.*)","blizzard",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("coastal flood(.*)","coastal flood",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("^cold(.*)","cold/wind chill",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("(.*)fog(.*)","dense fog",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("(.*)drought(.*)","drought",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("(.*)excessive heat|extreme heat","excessive heat",SelectedDataF1$EVTYPE) 
+SelectedDataF1$EVTYPE <- gsub("(.*)extreme cold(.*)|cold$","extreme cold/wind child",SelectedDataF1$EVTYPE) 
+unique(grep("(.*)extreme cold(.*)|cold$",SelectedDataF1$EVTYPE, value= TRUE)) 
+
+grep("extreme cold", SelectedDataF1$EVTYPE, value = TRUE)
+SelectedDataF1$EVTYPE <- gsub("(.*)extreme cold(.*)","extreme cold/wind child",SelectedDataF1$EVTYPE) 
+unique(grep("(.*)extreme cold(.*)",SelectedDataF1$EVTYPE, value= TRUE)) 
+
+grep("storm surge/tide", SelectedDataF1$EVTYPE, value = TRUE)
+SelectedDataF1$EVTYPE <- gsub("coastal(.*)storm","storm surge/tide",SelectedDataF1$EVTYPE) 
+grep("coastal(.*)storm",SelectedDataF1$EVTYPE, value= TRUE) 
+
+
+
+
+
+## Economic issue
+
+unique(data$CROPDMG)
+unique(data$PROPDMG)
+
+
+
+
 
