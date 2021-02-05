@@ -148,35 +148,58 @@ sort(tapply(SelectedData9311$CropDamage, SelectedData9311$TYPE, sum))
 # 1 
 # injuries/Fatalities  
 
-top10injuries <- names(tail(sort(tapply(SelectedData9311$INJURIES, SelectedData9311$TYPE, sum)), n =10))
-top10fatalities <- names(tail(sort(tapply(SelectedData9311$FATALITIES, SelectedData9311$TYPE, sum)), n =10))
 
-inju <- SelectedData9311 %>% filter(INJURIES > 0) 
-top10injuriesM <- names(tail(sort(tapply(inju$INJURIES, inju$TYPE, mean)), n =10))
-
-
-par(mfcol = c(1, 1), mar = c(3, 8, 2, 2), cex =0.5) 
-
+layout(matrix(c(1,2,3,3),nrow=2,ncol = 2, byrow = TRUE))
+top10injuries <- names(tail(sort(tapply(SelectedData9311$INJURIES, SelectedData9311$TYPE,
+                                        sum)), n =10))
 with(SelectedData9311 %>% filter(TYPE %in% top10injuries) %>% group_by(TYPE)
      %>% summarise(sum =sum(INJURIES))  %>% arrange(sum), barplot(height=sum,
                                                                   names=TYPE,
                                                                   horiz=T, 
                                                                   las=1))
+
+top10fatalities <- names(tail(sort(tapply(SelectedData9311$FATALITIES, SelectedData9311$TYPE,
+                                          sum)), n =10))
 with(SelectedData9311 %>% filter(TYPE %in% top10fatalities) %>% group_by(TYPE)
      %>% summarise(sum =sum(FATALITIES))  %>% arrange(sum), barplot(height=sum,
                                                                   names=TYPE,
                                                                   horiz=T, 
                                                                   las=1))
 
-with(inju %>% filter(TYPE %in% top10injuriesM), boxplot( INJURIES ~ TYPE ))
+least1injuries <- SelectedData9311 %>% filter(INJURIES > 0) 
+least1injuries <- least1injuries %>% filter(TYPE %in% names(table(least1injuries$TYPE)[table(least1injuries$TYPE) > 1]))
+top10injuriesM <- names(tail(sort(tapply(least1injuries$INJURIES, least1injuries$TYPE, 
+                                         mean)), n =10))
+
+forboxplot <- least1injuries %>% filter(TYPE %in% top10injuriesM) 
+with(forboxplot, boxplot(INJURIES ~ TYPE,ylim =c(0,500),cex.axis =0.7))
+means <- tapply(forboxplot$INJURIES, forboxplot$TYPE, mean)
+points(means,col="red",pch=16)
+
+
+##################################################################################
+least1fatalities<- SelectedData9311 %>% filter(FATALITIES > 0) 
+least1fatalities <- least1fatalities %>% filter(TYPE %in% names(table(least1fatalities$TYPE)[table(least1fatalities$TYPE) > 1]))
+top10fatalitiesM <- names(tail(sort(tapply(least1fatalities$FATALITIES, least1fatalities$TYPE, 
+                                         mean)), n =5))
+
+with(least1injuries %>% filter(TYPE %in% top10fatalitiesM) , boxplot(FATALITIES ~ TYPE,
+                                                                   ylim =c(0,120)))
+#################################################################################
 
 
 
 
+?boxplot
+
+?boxplot
 
 
-?barplot
+d <- least1injuries %>% filter(TYPE %in% top10injuriesM)  %>% mutate(INJURIES1 = log(INJURIES))
 
+log(least1injuries$INJURIES)
+
+?mutate
 
 GraphInjuries <- lastyear %>% filter(TYPE %in% top10injuriesLastY)
 unique(GraphInjuries$TYPE)
