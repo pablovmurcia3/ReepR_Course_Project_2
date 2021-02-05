@@ -16,52 +16,41 @@ library(dplyr)
 SelectedData <- data %>% select(STATE__,BGN_DATE,EVTYPE,FATALITIES,INJURIES,
                                 PROPDMG,PROPDMGEXP,CROPDMG, CROPDMGEXP)
 
-######## Some transformation #############
+######## Some transformations #############
 # date
 
-
-splitNames <- strsplit(data$BGN_DATE,"\\ ")
-
-firstElement <- function(x){x[1]}
-
 library(lubridate)
-SelectedData$BGN_DATE <- year(mdy(sapply(splitNames,firstElement)))
+splitNames <- strsplit(data$BGN_DATE,"\\ ")
+SelectedData$BGN_DATE <- year(mdy(sapply(splitNames,function(x){x[1]})))
 
 ##### Events (EVTYpe) ############
 
 
-list <- split(SelectedData, SelectedData$BGN_DATE)
-numEventsyears <- sapply(list, function(x){
-        length(unique(x[[3]]))
-}
-)
+splityears <- split(SelectedData, SelectedData$BGN_DATE)
+numEventsyears <- sapply(splityears, function(x){length(unique(x[[3]]))})
 numEventsyears
-
 
 #1. i will split the data (from 1960 t0 1992 - and form 1993 to 2011)
 
 SelectedData9311 <- filter(SelectedData, BGN_DATE > 1992)
 
-
 # As we can see, from 1960 to 1992 there are  many EVTYPE
 length(unique(SelectedData9311$EVTYPE))
 
-sort(table(SelectedData9311$EVTYPE))
+# But in the storm data documentation the official number of events is 48 
 
 
-
+# To deal with this problem, I will use the amatch function of the stringdist 
+# package. In order to optimize the utility of this function, first is needed to 
+# make some corrections to the original events. 1) transform the to lower case letter
+# 2) fix some names that are not well recognize by the amatch function
 ################################################################################
+# 1 
 SelectedData9311$EVTYPE <- tolower(SelectedData9311$EVTYPE)
 
-
-# amatch
-# here's an example of amatch
 library("stringdist")
 
-
-## but first we need to fix some names that are badly categorized by amatch
-
-
+# 2
 SelectedData9311$EVTYPE <- gsub("tstm","thunderstorm",SelectedData9311$EVTYPE) 
 SelectedData9311$EVTYPE <- gsub("^wind","high winds",SelectedData9311$EVTYPE) 
 SelectedData9311$EVTYPE <- gsub("unseasonably warm and dry","heat",SelectedData9311$EVTYPE) 
@@ -92,6 +81,8 @@ SelectedData9311$EVTYPE[f[43]]
 d <- amatch(SelectedData9311$EVTYPE[f[43]],categories,method = "jw", maxDist=20)
 categories[d]
 ################################################################################
+
+# Now that the data set is ready..
   
 categories <- c("Astronomical Low Tide", "Avalanche", "Blizzard", "Coastal Flood",
                 "Cold/Wind Chill", "Debris Flow",  "Dense Fog", "Dense Smoke","Drought",
@@ -107,7 +98,6 @@ categories <- c("Astronomical Low Tide", "Avalanche", "Blizzard", "Coastal Flood
 
 categories <- tolower(categories)
 
-
 # recategorization
 
 SelectedData9311$TYPE <- sapply(SelectedData9311$EVTYPE, function(x){
@@ -117,7 +107,6 @@ SelectedData9311$TYPE <- sapply(SelectedData9311$EVTYPE, function(x){
 ) 
 
 SelectedData9311 <- SelectedData9311 %>% relocate(TYPE, .after = EVTYPE)
-
 
 
 ################################################################################
@@ -130,11 +119,12 @@ sort(tapply(SelectedDataF1$FATALITIES, SelectedDataF1$TYPE, mean))
 
 ################################################################################
 
+# Economic part 
+
 SelectedData9311 <- SelectedData9311[!grepl("[+|?]", SelectedData9311$PROPDMGEXP),]
 SelectedData9311 <- SelectedData9311[!grepl("[?]", SelectedData9311$CROPDMGEXP),]
 
-
-SelectedData9311$SelectedData9311$CropDamage <- as.numeric(recode(SelectedData9311$CROPDMGEXP, 
+SelectedData9311$CROPDMGEXP <- as.numeric(recode(SelectedData9311$CROPDMGEXP, 
                               B = "1000000000", M ="1000000" , K ="1000" ,
                               k = "1000", "0"= "10","2" = "10", "8" = "10", 
                               .default = "0"))
@@ -155,5 +145,57 @@ sort(tapply(SelectedData9311$CropDamage, SelectedData9311$TYPE, sum))
 
 ################################################################################
 ################################################################################
+# 1 
+# injuries/Fatalities  
+
+top10injuries <- names(tail(sort(tapply(SelectedData9311$INJURIES, SelectedData9311$TYPE, sum)), n =10))
+top10fatalities <- names(tail(sort(tapply(SelectedData9311$FATALITIES, SelectedData9311$TYPE, sum)), n =10))
+
+inju <- SelectedData9311 %>% filter(INJURIES > 0) 
+top10injuriesM <- names(tail(sort(tapply(inju$INJURIES, inju$TYPE, mean)), n =10))
+
+
+par(mfcol = c(1, 1), mar = c(3, 8, 2, 2), cex =0.5) 
+
+with(SelectedData9311 %>% filter(TYPE %in% top10injuries) %>% group_by(TYPE)
+     %>% summarise(sum =sum(INJURIES))  %>% arrange(sum), barplot(height=sum,
+                                                                  names=TYPE,
+                                                                  horiz=T, 
+                                                                  las=1))
+with(SelectedData9311 %>% filter(TYPE %in% top10fatalities) %>% group_by(TYPE)
+     %>% summarise(sum =sum(FATALITIES))  %>% arrange(sum), barplot(height=sum,
+                                                                  names=TYPE,
+                                                                  horiz=T, 
+                                                                  las=1))
+
+with(inju %>% filter(TYPE %in% top10injuriesM), boxplot( INJURIES ~ TYPE ))
+
+
+
+
+
+
+?barplot
+
+
+GraphInjuries <- lastyear %>% filter(TYPE %in% top10injuriesLastY)
+unique(GraphInjuries$TYPE)
+
+
+GraphInjuries %>% ggplot(aes(x=TYPE, y=FATALITIES, fill=TYPE)) +  geom_boxplot()
+
+
+
+SelectedData <- ggplot( aes(x=name, y=value, fill=name)) +
+        geom_boxplot() +
+        scale_fill_viridis(discrete = TRUE, alpha=0.6) +
+        geom_jitter(color="black", size=0.4, alpha=0.9) +
+        theme_ipsum() +
+        theme(
+                legend.position="none",
+                plot.title = element_text(size=11)
+        ) +
+        ggtitle("A boxplot with jitter") +
+        xlab("")
 
 
