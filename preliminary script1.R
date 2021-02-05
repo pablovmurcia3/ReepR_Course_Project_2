@@ -187,38 +187,34 @@ with(least1injuries %>% filter(TYPE %in% top10fatalitiesM) , boxplot(FATALITIES 
                                                                    ylim =c(0,120)))
 #################################################################################
 
+SelectedData9311$TotalDamage <- SelectedData9311$PropDamage + SelectedData9311$CropDamage
 
+# Keep only the events that cause some economic damage 
 
+someEconomicDamage <- SelectedData9311 %>% filter(TotalDamage > 0)
 
-?boxplot
+# sort by the 10 most destructive type events, according to the sum of the damages
 
-?boxplot
+top10economicS <- names(tail(sort(tapply(someEconomicDamage$TotalDamage,
+                                        someEconomicDamage$TYPE, sum)),n =10))
 
+someEconomicDamageS <- someEconomicDamage %>% filter(TYPE %in% top10economicS)
 
-d <- least1injuries %>% filter(TYPE %in% top10injuriesM)  %>% mutate(INJURIES1 = log(INJURIES))
+# Barplot sum
 
-log(least1injuries$INJURIES)
+par(mfrow = c(1,1))
 
-?mutate
+with(someEconomicDamageS  %>% group_by(TYPE) %>% summarise(sum =sum(TotalDamage))
+     %>% arrange(desc(sum)), barplot(sum, names=TYPE,las=1, cex.names = 0.7))
 
-GraphInjuries <- lastyear %>% filter(TYPE %in% top10injuriesLastY)
-unique(GraphInjuries$TYPE)
+# sort by the 10 most destructive type events, according to the mean of the damages
 
+top10economicM <- names(tail(sort(tapply(someEconomicDamage$TotalDamage,
+                                         someEconomicDamage$TYPE, mean)),n =10))
 
-GraphInjuries %>% ggplot(aes(x=TYPE, y=FATALITIES, fill=TYPE)) +  geom_boxplot()
+someEconomicDamageM <- someEconomicDamage %>% filter(TYPE %in% top10economicM)
+unique(someEconomicDamageM$TYPE)
 
+# Barplot sum
 
-
-SelectedData <- ggplot( aes(x=name, y=value, fill=name)) +
-        geom_boxplot() +
-        scale_fill_viridis(discrete = TRUE, alpha=0.6) +
-        geom_jitter(color="black", size=0.4, alpha=0.9) +
-        theme_ipsum() +
-        theme(
-                legend.position="none",
-                plot.title = element_text(size=11)
-        ) +
-        ggtitle("A boxplot with jitter") +
-        xlab("")
-
-
+with(someEconomicDamageM, boxplot(TotalDamage ~ TYPE, ylim =c(0,500000000),cex.axis =0.7))
