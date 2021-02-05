@@ -37,6 +37,7 @@ numEventsyears <- sapply(list, function(x){
 )
 numEventsyears
 
+
 #1. i will split the data (from 1960 t0 1992 - and form 1993 to 2011)
 
 SelectedData9311 <- filter(SelectedData, BGN_DATE > 1992)
@@ -127,6 +128,32 @@ sort(tapply(SelectedDataF1$FATALITIES, SelectedDataF1$TYPE, mean))
 # --- injuries -- boxplot 
 # --- fatalities -- bar
 
+################################################################################
+
+SelectedData9311 <- SelectedData9311[!grepl("[+|?]", SelectedData9311$PROPDMGEXP),]
+SelectedData9311 <- SelectedData9311[!grepl("[?]", SelectedData9311$CROPDMGEXP),]
+
+
+SelectedData9311$SelectedData9311$CropDamage <- as.numeric(recode(SelectedData9311$CROPDMGEXP, 
+                              B = "1000000000", M ="1000000" , K ="1000" ,
+                              k = "1000", "0"= "10","2" = "10", "8" = "10", 
+                              .default = "0"))
+
+SelectedData9311$PROPDMGEXP <- as.numeric(recode(SelectedData9311$PROPDMGEXP,
+                              B = "1000000000", M ="1000000",m = "1000000",
+                              K ="1000" , H ="100",h ="100", "0"= "10","1"= "10",
+                              "2" = "10", "3" = "10", "4" = "10", "5" = "10", 
+                              "6" = "10", "7" = "10", "8" = "10", .default = "0"))
+
+SelectedData9311$CropDamage <- SelectedData9311$CROPDMG*SelectedData9311$CROPDMGEXP
+SelectedData9311$PropDamage <- SelectedData9311$PROPDMG*SelectedData9311$PROPDMGEXP
+
+###############################################################################
+sort(tapply(SelectedData9311$PropDamage, SelectedData9311$TYPE, sum))
+sort(tapply(SelectedData9311$CropDamage, SelectedData9311$TYPE, sum))
+###############################################################################
 
 ################################################################################
+################################################################################
+
 
