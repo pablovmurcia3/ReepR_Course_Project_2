@@ -34,6 +34,7 @@ numEventsyears
 
 SelectedData9311 <- filter(SelectedData, BGN_DATE > 1992)
 
+
 # As we can see, from 1960 to 1992 there are  many EVTYPE
 length(unique(SelectedData9311$EVTYPE))
 
@@ -138,6 +139,9 @@ SelectedData9311$PROPDMGEXP <- as.numeric(recode(SelectedData9311$PROPDMGEXP,
 SelectedData9311$CropDamage <- SelectedData9311$CROPDMG*SelectedData9311$CROPDMGEXP
 SelectedData9311$PropDamage <- SelectedData9311$PROPDMG*SelectedData9311$PROPDMGEXP
 
+
+SelectedData9311$TotalDamage <- SelectedData9311$PropDamage + SelectedData9311$CropDamage
+
 ###############################################################################
 sort(tapply(SelectedData9311$PropDamage, SelectedData9311$TYPE, sum))
 sort(tapply(SelectedData9311$CropDamage, SelectedData9311$TYPE, sum))
@@ -145,76 +149,107 @@ sort(tapply(SelectedData9311$CropDamage, SelectedData9311$TYPE, sum))
 
 ################################################################################
 ################################################################################
-# 1 
-# injuries/Fatalities  
+
+# Get to tidy
+install.packages("tidyverse")
+library(tidyverse)
+
+tidyData <- SelectedData9311 %>%  group_by(TYPE)  %>%  
+  summarise(SumInjuries = sum(INJURIES), SumFatalities = sum(FATALITIES),
+            SumTotalDamages = sum(TotalDamage))
+
+###############################################################################
 
 
-layout(matrix(c(1,2,3,3),nrow=2,ncol = 2, byrow = TRUE))
-top10injuries <- names(tail(sort(tapply(SelectedData9311$INJURIES, SelectedData9311$TYPE,
-                                        sum)), n =10))
-with(SelectedData9311 %>% filter(TYPE %in% top10injuries) %>% group_by(TYPE)
-     %>% summarise(sum =sum(INJURIES))  %>% arrange(sum), barplot(height=sum,
-                                                                  names=TYPE,
-                                                                  horiz=T, 
-                                                                  las=1))
+# Injuries
+tidyInjuries <- arrange(tidyData,desc(SumInjuries))  %>% 
+  mutate(SumInjuries = SumInjuries/100) %>%
+  mutate(id = 1:nrow(tidyInjuries))
+x <-c("23.3K", "6.8K", "6.7K", "6.2K", "5.2K", "2.5K", "2.1K", "1.7K", "1.6K", "1.6K")
+length(x) <- nrow(tidyInjuries)
+tidyInjuries <- cbind(x, tidyInjuries)
+tidyInjuries$TYPE <- paste(tidyInjuries$TYPE, tidyInjuries$x)
+tidyInjuries$TYPE <- gsub("NA","", tidyInjuries$TYPE)
 
-top10fatalities <- names(tail(sort(tapply(SelectedData9311$FATALITIES, SelectedData9311$TYPE,
-                                          sum)), n =10))
-with(SelectedData9311 %>% filter(TYPE %in% top10fatalities) %>% group_by(TYPE)
-     %>% summarise(sum =sum(FATALITIES))  %>% arrange(sum), barplot(height=sum,
-                                                                  names=TYPE,
-                                                                  horiz=T, 
-                                                                  las=1))
-
-least1injuries <- SelectedData9311 %>% filter(INJURIES > 0) 
-least1injuries <- least1injuries %>% filter(TYPE %in% names(table(least1injuries$TYPE)[table(least1injuries$TYPE) > 1]))
-top10injuriesM <- names(tail(sort(tapply(least1injuries$INJURIES, least1injuries$TYPE, 
-                                         mean)), n =10))
-
-forboxplot <- least1injuries %>% filter(TYPE %in% top10injuriesM) 
-with(forboxplot, boxplot(INJURIES ~ TYPE,ylim =c(0,500),cex.axis =0.7))
-means <- tapply(forboxplot$INJURIES, forboxplot$TYPE, mean)
-points(means,col="red",pch=16)
+# ----- ------------------------------------------- ---- #
+label_data <- tidyInjuries
+number_of_bar <- nrow(label_data)
+angle <-  90 - 360 * (label_data$id-0.5) /number_of_bar 
+label_data$hjust<-ifelse( angle < -90, 1, 0)
+label_data$angle<-ifelse(angle < -90, angle+180, angle)
+# ----- ------------------------------------------- ---- #
 
 
-##################################################################################
-least1fatalities<- SelectedData9311 %>% filter(FATALITIES > 0) 
-least1fatalities <- least1fatalities %>% filter(TYPE %in% names(table(least1fatalities$TYPE)[table(least1fatalities$TYPE) > 1]))
-top10fatalitiesM <- names(tail(sort(tapply(least1fatalities$FATALITIES, least1fatalities$TYPE, 
-                                         mean)), n =5))
+p <- ggplot(tidyInjuries, aes(x = as.factor(id), y = SumInjuries)) +
+  geom_bar(stat="identity", fill=alpha("red", 0.3)) +
+  ylim(-100,120) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-2,4), "cm")     
+  ) +
+  coord_polar(start = 0) +
+  geom_text(data=label_data, 
+            aes(x=id, y=SumInjuries+10, label=TYPE, hjust=hjust), color="black", 
+            fontface="bold",alpha=0.6, size=2.5, angle= label_data$angle,
+            inherit.aes = FALSE ) 
 
-with(least1injuries %>% filter(TYPE %in% top10fatalitiesM) , boxplot(FATALITIES ~ TYPE,
-                                                                   ylim =c(0,120)))
+  
+
+p
+
+# Fatalities
+
+tidyFatalities <- arrange(tidyData,desc(SumFatalities))  %>%
+  mutate(SumFatalities = SumFatalities/100) %>% 
+  mutate(id = 1:nrow(tidyInjuries))
+x <-c("2M", "1.6K", "1.1K", "1K", "0.8K", "0.5K", "0.4K","0.4K","0.3K","0.3K") 
+length(x) <- nrow(tidyFatalities)
+tidyFatalities <- cbind(x, tidyFatalities)
+tidyFatalities$TYPE <- paste(tidyFatalities$TYPE, tidyFatalities$x)
+tidyFatalities$TYPE <- gsub("NA","", tidyFatalities$TYPE)
+
+# ----- ------------------------------------------- ---- #
+label_data <- tidyFatalities
+number_of_bar <- nrow(label_data)
+angle <-  90 - 360 * (label_data$id-0.5) /number_of_bar 
+label_data$hjust<-ifelse( angle < -90, 1, 0)
+label_data$angle<-ifelse(angle < -90, angle+180, angle)
+# ----- ------------------------------------------- ---- #
+
+
+p1 <- ggplot(tidyFatalities, aes(x = as.factor(id), y = SumFatalities)) +
+  geom_bar(stat="identity", fill=alpha("blue", 0.3)) +
+  ylim(-100,120) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-2,4), "cm")     
+  ) +
+  coord_polar(start = 0) +
+  geom_text(data=label_data,
+            aes(x=id, y=SumFatalities+10, label=TYPE, hjust=hjust), 
+            color="black", fontface="bold",alpha=0.6, size=2.5, 
+            angle= label_data$angle, inherit.aes = FALSE ) 
+
+
+
+p1
+
+
+install.packages("gridExtra")
+library(gridExtra)
+grid.arrange(p, p1, ncol=2)
+
+
+
+
+
+
+
 #################################################################################
 
-SelectedData9311$TotalDamage <- SelectedData9311$PropDamage + SelectedData9311$CropDamage
-
-# Keep only the events that cause some economic damage 
-
-someEconomicDamage <- SelectedData9311 %>% filter(TotalDamage > 0)
-
-# sort by the 10 most destructive type events, according to the sum of the damages
-
-top10economicS <- names(tail(sort(tapply(someEconomicDamage$TotalDamage,
-                                        someEconomicDamage$TYPE, sum)),n =10))
-
-someEconomicDamageS <- someEconomicDamage %>% filter(TYPE %in% top10economicS)
-
-# Barplot sum
-
-par(mfrow = c(1,1))
-
-with(someEconomicDamageS  %>% group_by(TYPE) %>% summarise(sum =sum(TotalDamage))
-     %>% arrange(desc(sum)), barplot(sum, names=TYPE,las=1, cex.names = 0.7))
-
-# sort by the 10 most destructive type events, according to the mean of the damages
-
-top10economicM <- names(tail(sort(tapply(someEconomicDamage$TotalDamage,
-                                         someEconomicDamage$TYPE, mean)),n =10))
-
-someEconomicDamageM <- someEconomicDamage %>% filter(TYPE %in% top10economicM)
-unique(someEconomicDamageM$TYPE)
-
-# Barplot sum
-
-with(someEconomicDamageM, boxplot(TotalDamage ~ TYPE, ylim =c(0,500000000),cex.axis =0.7))
