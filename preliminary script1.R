@@ -137,16 +137,17 @@ tidyData <- SelectedData9311 %>%  group_by(TYPE)  %>%
 
 
 # Injuries
+
 tidyInjuries <- arrange(tidyData,desc(SumInjuries))  %>% 
   mutate(SumInjuries = SumInjuries/320) %>%
-  mutate(id = 1:nrow(tidyInjuries))
+  mutate(id = 1:nrow(tidyData))
 x <-c("23.3K", "6.8K", "6.7K", "6.2K", "5.2K", "2.5K", "2.1K", "1.7K", "1.6K", "1.6K")
 length(x) <- nrow(tidyInjuries)
 tidyInjuries <- cbind(x, tidyInjuries)
 tidyInjuries$TYPE <- paste(tidyInjuries$TYPE, tidyInjuries$x)
 tidyInjuries$TYPE <- gsub("NA","", tidyInjuries$TYPE)
 
-# ----- ------------------------------------------- ---- #
+# ----- ----------------------------------------------- #
 label_data <- tidyInjuries
 number_of_bar <- nrow(label_data)
 angle <-  90 - 360 * (label_data$id-0.5) /number_of_bar 
@@ -163,9 +164,10 @@ p <- ggplot(tidyInjuries, aes(x = as.factor(id), y = SumInjuries)) +
     axis.text = element_blank(),
     axis.title = element_blank(),
     panel.grid = element_blank(),
-    plot.margin = unit(rep(-2,4), "cm")     
+    plot.margin = unit(c(-2.2,-2,-2,-3), "cm")     
   ) +
   coord_polar(start = 0) +
+  ggtitle("Total number of injuries caused by each of the 48  official event type (1993-2011)") +
   geom_text(data=label_data, 
             aes(x=id, y=SumInjuries+10, label=TYPE, hjust=hjust), color="black", 
             fontface="bold",alpha=0.6, size=2.5, angle= label_data$angle,
@@ -179,21 +181,20 @@ p
 
 tidyFatalities <- arrange(tidyData,desc(SumFatalities))  %>%
   mutate(SumFatalities = SumFatalities/280) %>% 
-  mutate(id = 1:nrow(tidyInjuries))
+  mutate(id = 1:nrow(tidyData))
 x <-c("2K", "1.6K", "1.1K", "1K", "0.8K", "0.5K", "0.4K","0.4K","0.3K","0.3K") 
 length(x) <- nrow(tidyFatalities)
 tidyFatalities <- cbind(x, tidyFatalities)
 tidyFatalities$TYPE <- paste(tidyFatalities$TYPE, tidyFatalities$x)
 tidyFatalities$TYPE <- gsub("NA","", tidyFatalities$TYPE)
 
-# ----- ------------------------------------------- ---- #
+# ----- ------------------------------------------------ #
 label_data <- tidyFatalities
 number_of_bar <- nrow(label_data)
 angle <-  90 - 360 * (label_data$id-0.5) /number_of_bar 
 label_data$hjust<-ifelse( angle < -90, 1, 0)
 label_data$angle<-ifelse(angle < -90, angle+180, angle)
-# ----- ------------------------------------------- ---- #
-
+# ---------------------------------------------------- #
 
 p1 <- ggplot(tidyFatalities, aes(x = as.factor(id), y = SumFatalities)) +
   geom_bar(stat="identity", fill=alpha("blue", 0.3)) +
@@ -206,6 +207,7 @@ p1 <- ggplot(tidyFatalities, aes(x = as.factor(id), y = SumFatalities)) +
     plot.margin = unit(rep(-2,4), "cm")     
   ) +
   coord_polar(start = 0) +
+  ggtitle("Total number of fatlities caused by each of the 48  official event type (1993-2011)") +
   geom_text(data=label_data,
             aes(x=id, y=SumFatalities+10, label=TYPE, hjust=hjust), 
             color="black", fontface="bold",alpha=0.6, size=2.5, 
@@ -216,10 +218,8 @@ p1 <- ggplot(tidyFatalities, aes(x = as.factor(id), y = SumFatalities)) +
 p1
 
 
-
-library(gridExtra)
 grid.arrange(p, p1, ncol=2)
-
+?grid.arrange
 #################################################################################
 
 # Economic Damages  
@@ -252,6 +252,7 @@ p <- ggplot(tidyDamages, aes(x = as.factor(id), y = SumTotalDamages)) +
     plot.margin = unit(rep(-2,4), "cm")     
   ) +
   coord_polar(start = 0) +
+  ggtitle("total economic damage ($) caused by each of the 48 official event type (1993-2011)") +
   geom_text(data=label_data,
             aes(x=id, y=SumTotalDamages+10, label=TYPE, hjust=hjust), 
             color="black", fontface="bold",alpha=0.6, size=2.5, 
