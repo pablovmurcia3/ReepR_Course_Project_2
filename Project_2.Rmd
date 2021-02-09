@@ -1,9 +1,24 @@
----
-title: "Project_2"
-author: "Pablo Velásquez"
-date: "9/2/2021"
-output: html_document
----
+
+
+
+**Reproducible Research: Evaluating the most harmful and destructive meteorological events**
+========================
+
+*Pablo Velásquez Murcia*      
+*`r Sys.Date()`*
+
+## **Index**
+
+1. Summary of the analysis   
+2. Getting the raw data  
+3. Data processing      
+3.1 Cleaning the event types       
+3.2 Obtaining the data of economic damages  
+3.3.Tidy data
+4. Resuts  
+4.1 Most harmful Meteorological events with respect to population health
+4.2 Meteorological events with the greatest economic consequences
+
 
 ```{r libraries , warning= FALSE, results='hide', message = FALSE, echo=TRUE}
 
