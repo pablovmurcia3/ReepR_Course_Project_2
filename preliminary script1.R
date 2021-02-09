@@ -49,7 +49,7 @@ length(unique(SelectedData9311$EVTYPE))
 # 1 
 SelectedData9311$EVTYPE <- tolower(SelectedData9311$EVTYPE)
 
-library("stringdist")
+library(stringdist)
 
 # 2
 SelectedData9311$EVTYPE <- gsub("tstm","thunderstorm",SelectedData9311$EVTYPE) 
@@ -71,17 +71,6 @@ SelectedData9311 <- SelectedData9311[!grepl("late|unseason(.*)|prolong|mudslide|
                                             |precipitation|unusual|dry",SelectedData9311$EVTYPE),]
 
 
-################################################################################
-grep("urban/small stream",SelectedData9311$EVTYPE, value = TRUE)
-sort(table(SelectedData9311$EVTYPE))
-
-
-f <- grep("urban/small stream",SelectedData9311$EVTYPE)
-
-SelectedData9311$EVTYPE[f[43]]
-d <- amatch(SelectedData9311$EVTYPE[f[43]],categories,method = "jw", maxDist=20)
-categories[d]
-################################################################################
 
 # Now that the data set is ready..
   
@@ -107,17 +96,8 @@ SelectedData9311$TYPE <- sapply(SelectedData9311$EVTYPE, function(x){
         }
 ) 
 
-SelectedData9311 <- SelectedData9311 %>% relocate(TYPE, .after = EVTYPE)
-
 
 ################################################################################
-sort(tapply(SelectedData9311$FATALITIES, SelectedData9311$TYPE, sum))
-sort(tapply(SelectedDataF1$FATALITIES, SelectedDataF1$TYPE, mean))
-################################################################################
-# Better option -- take the SelectedData9311 dataset
-# --- injuries -- boxplot 
-# --- fatalities -- bar
-
 ################################################################################
 
 # Economic part 
@@ -142,17 +122,12 @@ SelectedData9311$PropDamage <- SelectedData9311$PROPDMG*SelectedData9311$PROPDMG
 
 SelectedData9311$TotalDamage <- SelectedData9311$PropDamage + SelectedData9311$CropDamage
 
-###############################################################################
-sort(tapply(SelectedData9311$PropDamage, SelectedData9311$TYPE, sum))
-sort(tapply(SelectedData9311$CropDamage, SelectedData9311$TYPE, sum))
-###############################################################################
 
 ################################################################################
 ################################################################################
 
 # Get to tidy
-install.packages("tidyverse")
-library(tidyverse)
+library(ggplot2)
 
 tidyData <- SelectedData9311 %>%  group_by(TYPE)  %>%  
   summarise(SumInjuries = sum(INJURIES), SumFatalities = sum(FATALITIES),
@@ -163,7 +138,7 @@ tidyData <- SelectedData9311 %>%  group_by(TYPE)  %>%
 
 # Injuries
 tidyInjuries <- arrange(tidyData,desc(SumInjuries))  %>% 
-  mutate(SumInjuries = SumInjuries/100) %>%
+  mutate(SumInjuries = SumInjuries/320) %>%
   mutate(id = 1:nrow(tidyInjuries))
 x <-c("23.3K", "6.8K", "6.7K", "6.2K", "5.2K", "2.5K", "2.1K", "1.7K", "1.6K", "1.6K")
 length(x) <- nrow(tidyInjuries)
@@ -203,9 +178,9 @@ p
 # Fatalities
 
 tidyFatalities <- arrange(tidyData,desc(SumFatalities))  %>%
-  mutate(SumFatalities = SumFatalities/100) %>% 
+  mutate(SumFatalities = SumFatalities/280) %>% 
   mutate(id = 1:nrow(tidyInjuries))
-x <-c("2M", "1.6K", "1.1K", "1K", "0.8K", "0.5K", "0.4K","0.4K","0.3K","0.3K") 
+x <-c("2K", "1.6K", "1.1K", "1K", "0.8K", "0.5K", "0.4K","0.4K","0.3K","0.3K") 
 length(x) <- nrow(tidyFatalities)
 tidyFatalities <- cbind(x, tidyFatalities)
 tidyFatalities$TYPE <- paste(tidyFatalities$TYPE, tidyFatalities$x)
@@ -241,15 +216,48 @@ p1 <- ggplot(tidyFatalities, aes(x = as.factor(id), y = SumFatalities)) +
 p1
 
 
-install.packages("gridExtra")
+
 library(gridExtra)
 grid.arrange(p, p1, ncol=2)
 
-
-
-
-
-
-
 #################################################################################
+
+# Economic Damages  
+
+tidyDamages <- arrange(tidyData,desc(SumTotalDamages))  %>% 
+  mutate(SumTotalDamages = SumTotalDamages/2000000000) %>%
+  mutate(id = 1:nrow(tidyData))
+x <-c("150.9B", "90.2B", "47.9B", "28.3B", "28.3B", "19B", "15B", "10.9B", "8.9B", "8.8B")
+length(x) <- nrow(tidyDamages)
+tidyDamages <- cbind(x, tidyDamages)
+tidyDamages$TYPE <- paste(tidyDamages$TYPE, tidyDamages$x)
+tidyDamages$TYPE <- gsub("NA","", tidyDamages$TYPE)
+# ----- ------------------------------------------- ---- #
+label_data <- tidyDamages
+number_of_bar <- nrow(tidyDamages)
+angle <-  90 - 360 * (label_data$id-0.5) /number_of_bar 
+label_data$hjust<-ifelse( angle < -90, 1, 0)
+label_data$angle<-ifelse(angle < -90, angle+180, angle)
+# ----- ------------------------------------------- ---- #
+
+
+p <- ggplot(tidyDamages, aes(x = as.factor(id), y = SumTotalDamages)) +
+  geom_bar(stat="identity", fill=alpha("blue", 0.3)) +
+  ylim(-100,120) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-2,4), "cm")     
+  ) +
+  coord_polar(start = 0) +
+  geom_text(data=label_data,
+            aes(x=id, y=SumTotalDamages+10, label=TYPE, hjust=hjust), 
+            color="black", fontface="bold",alpha=0.6, size=2.5, 
+            angle= label_data$angle, inherit.aes = FALSE ) 
+
+
+
+p
 
