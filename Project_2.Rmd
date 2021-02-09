@@ -1,0 +1,295 @@
+---
+title: "Project_2"
+author: "Pablo Velásquez"
+date: "9/2/2021"
+output: html_document
+---
+
+```{r libraries , warning= FALSE, results='hide', message = FALSE, echo=TRUE}
+
+# install.packages("R.utils")
+# install.packages("dplyr")
+# install.packages("lubridate")
+# install.packages("stringdist")
+# install.packages("ggplot2")
+# install.packages("gridExtra")
+
+library(R.utils)
+library(dplyr)
+library(lubridate)
+library(stringdist)
+library(ggplot2)
+library(gridExtra)
+
+```
+
+
+
+```{r raw_data , cache=TRUE , warning=TRUE, results='hide', echo=TRUE}
+fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+download.file(fileUrl,destfile="Storm Data.bz2",method="curl")
+bunzip2("Storm Data.bz2", destname = "Storm DataDes", remove = FALSE)
+data <- read.csv("Storm DataDES")
+```
+
+
+
+```{r select_data,  warning=TRUE, results='hide', echo=TRUE}
+SelectedData <- data %>% select(STATE__,BGN_DATE,EVTYPE,FATALITIES,INJURIES,
+                                PROPDMG,PROPDMGEXP,CROPDMG, CROPDMGEXP)
+```
+
+
+```{r problem_EVTYPE,  warning=TRUE, echo=TRUE}
+
+length(unique(SelectedData$EVTYPE))
+
+```
+
+
+```{r dates,  warning=TRUE, echo=TRUE}
+splitNames <- strsplit(data$BGN_DATE,"\\ ")
+SelectedData$BGN_DATE <- year(mdy(sapply(splitNames,function(x){x[1]})))
+
+splityears <- split(SelectedData, SelectedData$BGN_DATE)
+numEventsyears <- sapply(splityears, function(x){length(unique(x[[3]]))})
+numEventsyears
+```
+
+
+
+```{r good_dates,  warning=TRUE, results='hide', echo=TRUE}
+SelectedData9311 <- filter(SelectedData, BGN_DATE > 1992)
+```
+
+
+```{r problem_EVTYPE2, echo=TRUE}
+length(unique(SelectedData9311$EVTYPE))
+```
+
+
+```{r solution, echo=TRUE}
+
+#1
+SelectedData9311$EVTYPE <- tolower(SelectedData9311$EVTYPE)
+
+#2
+SelectedData9311$EVTYPE <- gsub("tstm","thunderstorm",SelectedData9311$EVTYPE) 
+SelectedData9311$EVTYPE <- gsub("^wind","high winds",SelectedData9311$EVTYPE) 
+SelectedData9311$EVTYPE <- gsub("unseasonably warm and dry","heat",SelectedData9311$EVTYPE) 
+SelectedData9311$EVTYPE <- gsub("unseasonably warm","heat",SelectedData9311$EVTYPE) 
+SelectedData9311$EVTYPE <- gsub("^fog","dense fog",SelectedData9311$EVTYPE) 
+SelectedData9311$EVTYPE <- gsub("landslide","debris flow",SelectedData9311$EVTYPE) 
+SelectedData9311$EVTYPE <- gsub("light ","winter ",SelectedData9311$EVTYPE) 
+SelectedData9311$EVTYPE <- gsub("(wet|dry) microburst|microburst","thunderstorm",SelectedData9311$EVTYPE) 
+SelectedData9311$EVTYPE <- gsub("moderate","",SelectedData9311$EVTYPE) 
+SelectedData9311$EVTYPE <- gsub("snow squalls","heavy snow",SelectedData9311$EVTYPE) 
+SelectedData9311$EVTYPE <- gsub("^smoke","dense smoke",SelectedData9311$EVTYPE)
+
+SelectedData9311 <- SelectedData9311[!grepl("late|unseason(.*)|prolong|mudslide|
+                                            black|black ice|wall|summary|(.*)record(.*)|
+                                            abnormal|blowing|glaze|other
+                                            |precipitation|unusual|dry",SelectedData9311$EVTYPE),]
+
+
+```
+
+
+```{r solution1, echo=TRUE}
+categories <- c("Astronomical Low Tide", "Avalanche", "Blizzard", "Coastal Flood",
+                "Cold/Wind Chill", "Debris Flow",  "Dense Fog", "Dense Smoke","Drought",
+                "Dust Devil", "Dust Storm","Excessive Heat","Extreme Cold/Wind Chill",
+                "Flash Flood","Flood","Frost/Freeze","Funnel Cloud", "Freezing Fog", 
+                "Hail","Heat" ,"Heavy Rain", "Heavy Snow" ,"High Surf" ,"High Wind",
+                "Hurricane/Typhoon","Ice Storm","Lake-Effect Snow","Lakeshore Flood",
+                "Lightning" ,"Marine Hail","Marine High Wind","Marine Strong Wind",
+                "Marine Thunderstorm Wind","Rip Current","Seiche","Sleet","Storm Surge/Tide",
+                "Strong Wind","Thunderstorm Wind","Tornado","Tropical Depression",
+                "Tropical Storm","Tsunami","Volcanic Ash","Waterspout","Wildfire", 
+                "Winter Storm","Winter Weather")
+
+categories <- tolower(categories)
+```
+
+```{r solution2, echo=TRUE}
+categories <- c("Astronomical Low Tide", "Avalanche", "Blizzard", "Coastal Flood",
+                "Cold/Wind Chill", "Debris Flow",  "Dense Fog", "Dense Smoke","Drought",
+                "Dust Devil", "Dust Storm","Excessive Heat","Extreme Cold/Wind Chill",
+                "Flash Flood","Flood","Frost/Freeze","Funnel Cloud", "Freezing Fog", 
+                "Hail","Heat" ,"Heavy Rain", "Heavy Snow" ,"High Surf" ,"High Wind",
+                "Hurricane/Typhoon","Ice Storm","Lake-Effect Snow","Lakeshore Flood",
+                "Lightning" ,"Marine Hail","Marine High Wind","Marine Strong Wind",
+                "Marine Thunderstorm Wind","Rip Current","Seiche","Sleet","Storm Surge/Tide",
+                "Strong Wind","Thunderstorm Wind","Tornado","Tropical Depression",
+                "Tropical Storm","Tsunami","Volcanic Ash","Waterspout","Wildfire", 
+                "Winter Storm","Winter Weather")
+
+categories <- tolower(categories)
+
+```
+
+
+```{r solution3, echo=TRUE, cache=TRUE}
+SelectedData9311$TYPE <- sapply(SelectedData9311$EVTYPE, function(x){
+        i <- amatch(x,categories,method = "jw", maxDist=20)
+        categories[i]
+        }
+) 
+```
+
+
+
+```{r economic_part, echo=TRUE}
+
+SelectedData9311 <- SelectedData9311[!grepl("[+|?]", SelectedData9311$PROPDMGEXP),]
+SelectedData9311 <- SelectedData9311[!grepl("[?]", SelectedData9311$CROPDMGEXP),]
+
+SelectedData9311$CROPDMGEXP <- as.numeric(recode(SelectedData9311$CROPDMGEXP, 
+                              B = "1000000000", M ="1000000" , K ="1000" ,
+                              k = "1000", "0"= "10","2" = "10", "8" = "10", 
+                              .default = "0"))
+
+SelectedData9311$PROPDMGEXP <- as.numeric(recode(SelectedData9311$PROPDMGEXP,
+                              B = "1000000000", M ="1000000",m = "1000000",
+                              K ="1000" , H ="100",h ="100", "0"= "10","1"= "10",
+                              "2" = "10", "3" = "10", "4" = "10", "5" = "10", 
+                              "6" = "10", "7" = "10", "8" = "10", .default = "0"))
+
+SelectedData9311$CropDamage <- SelectedData9311$CROPDMG*SelectedData9311$CROPDMGEXP
+SelectedData9311$PropDamage <- SelectedData9311$PROPDMG*SelectedData9311$PROPDMGEXP
+
+
+SelectedData9311$TotalDamage <- SelectedData9311$PropDamage + SelectedData9311$CropDamage
+
+```
+
+
+```{r get_tidy,  echo=TRUE}
+
+tidyData <- SelectedData9311 %>%  group_by(TYPE)  %>%  
+  summarise(SumInjuries = sum(INJURIES), SumFatalities = sum(FATALITIES),
+            SumTotalDamages = sum(TotalDamage))
+
+```
+
+
+
+```{r results1,  echo=TRUE,  fig.align='center', fig.width= 10, fig.height = 7}
+# Injuries
+
+tidyInjuries <- arrange(tidyData,desc(SumInjuries))  %>% 
+  mutate(SumInjuries = SumInjuries/320) %>%
+  mutate(id = 1:nrow(tidyData))
+x <-c("23.3K", "6.8K", "6.7K", "6.2K", "5.2K", "2.5K", "2.1K", "1.7K", "1.6K", "1.6K")
+length(x) <- nrow(tidyInjuries)
+tidyInjuries <- cbind(x, tidyInjuries)
+tidyInjuries$TYPE <- paste(tidyInjuries$TYPE, tidyInjuries$x)
+tidyInjuries$TYPE <- gsub("NA","", tidyInjuries$TYPE)
+
+# ----- ----------------------------------------------- #
+label_data <- tidyInjuries
+number_of_bar <- nrow(label_data)
+angle <-  90 - 360 * (label_data$id-0.5) /number_of_bar 
+label_data$hjust<-ifelse( angle < -90, 1, 0)
+label_data$angle<-ifelse(angle < -90, angle+180, angle)
+# ----- ------------------------------------------- ---- #
+
+p <- ggplot(tidyInjuries, aes(x = as.factor(id), y = SumInjuries)) +
+  geom_bar(stat="identity", fill=alpha("red", 0.3)) +
+  ylim(-100,120) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(c(-2.2,-2,-2,-2), "cm")     
+  ) +
+  coord_polar(start = 0) +
+  geom_text(data=label_data, 
+            aes(x=id, y=SumInjuries+10, label=TYPE, hjust=hjust), color="black", 
+            fontface="bold",alpha=0.6, size=3, angle= label_data$angle,
+            inherit.aes = FALSE ) 
+
+
+
+# Fatalities
+
+tidyFatalities <- arrange(tidyData,desc(SumFatalities))  %>%
+  mutate(SumFatalities = SumFatalities/280) %>% 
+  mutate(id = 1:nrow(tidyData))
+x <-c("2K", "1.6K", "1.1K", "1K", "0.8K", "0.5K", "0.4K","0.4K","0.3K","0.3K") 
+length(x) <- nrow(tidyFatalities)
+tidyFatalities <- cbind(x, tidyFatalities)
+tidyFatalities$TYPE <- paste(tidyFatalities$TYPE, tidyFatalities$x)
+tidyFatalities$TYPE <- gsub("NA","", tidyFatalities$TYPE)
+
+# ----- ------------------------------------------------ #
+label_data <- tidyFatalities
+number_of_bar <- nrow(label_data)
+angle <-  90 - 360 * (label_data$id-0.5) /number_of_bar 
+label_data$hjust<-ifelse( angle < -90, 1, 0)
+label_data$angle<-ifelse(angle < -90, angle+180, angle)
+# ---------------------------------------------------- #
+
+p1 <- ggplot(tidyFatalities, aes(x = as.factor(id), y = SumFatalities)) +
+  geom_bar(stat="identity", fill=alpha("blue", 0.3)) +
+  ylim(-100,120) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(c(-2,-2,-2,-2), "cm")        
+  ) +
+  coord_polar(start = 0) +
+  geom_text(data=label_data,
+            aes(x=id, y=SumFatalities+10, label=TYPE, hjust=hjust), 
+            color="black", fontface="bold",alpha=0.6, size=3, 
+            angle= label_data$angle, inherit.aes = FALSE ) 
+
+grid.arrange(arrangeGrob(p, top = "Total number of injuries caused by each of the 48 \nofficial event type (1993-2011)"), arrangeGrob(p1, top = "Total number of fatlities caused by each of the 48  \nofficial event type (1993-2011)"), ncol=2)
+
+```
+
+
+
+```{r results2,  echo=TRUE,  fig.align='center', fig.height = 9}
+
+# Economic Damages  
+
+tidyDamages <- arrange(tidyData,desc(SumTotalDamages))  %>% 
+  mutate(SumTotalDamages = SumTotalDamages/2500000000) %>%
+  mutate(id = 1:nrow(tidyData))
+x <-c("150.9B", "90.2B", "47.9B", "28.3B", "28.3B", "19B", "15B", "10.9B", "8.9B", "8.8B")
+length(x) <- nrow(tidyDamages)
+tidyDamages <- cbind(x, tidyDamages)
+tidyDamages$TYPE <- paste(tidyDamages$TYPE, tidyDamages$x)
+tidyDamages$TYPE <- gsub("NA","", tidyDamages$TYPE)
+# ----- ------------------------------------------- ---- #
+label_data <- tidyDamages
+number_of_bar <- nrow(tidyDamages)
+angle <-  90 - 360 * (label_data$id-0.5) /number_of_bar 
+label_data$hjust<-ifelse( angle < -90, 1, 0)
+label_data$angle<-ifelse(angle < -90, angle+180, angle)
+# ----- ------------------------------------------- ---- #
+
+
+p <- ggplot(tidyDamages, aes(x = as.factor(id), y = SumTotalDamages)) +
+  geom_bar(stat="identity", fill=alpha("blue", 0.3)) +
+  ylim(-100,120) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-2,4), "cm")     
+  ) +
+  coord_polar(start = 0) +
+  geom_text(data=label_data,
+            aes(x=id, y=SumTotalDamages+10, label=TYPE, hjust=hjust), 
+            color="black", fontface="bold",alpha=0.6, size=3, 
+            angle= label_data$angle, inherit.aes = FALSE ) 
+
+grid.arrange(arrangeGrob(p, top = "Total economic damage ($) caused by each of the 48 \nofficial event type (1993-2011)"))
+
+```
