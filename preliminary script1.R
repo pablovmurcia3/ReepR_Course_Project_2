@@ -4,6 +4,8 @@
 fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 download.file(fileUrl,destfile="Storm Data.bz2",method="curl") # it takes some minutes depending on your internet connection
 
+Sys.Date()
+
 ########### Decompression ###########
 install.packages("R.utils")
 library(R.utils)
