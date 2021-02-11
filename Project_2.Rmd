@@ -1,7 +1,7 @@
 
 
 
-**Reproducible Research: Evaluating the most harmful and destructive meteorological events**
+**Reproducible Research: Evaluating the most harmful and destructive types meteorological events**
 ========================
 
 *Pablo Velásquez Murcia*      
@@ -10,15 +10,26 @@
 ## **Index**
 
 1. Summary of the analysis   
-2. Getting the raw data  
-3. Data processing      
-3.1 Cleaning the event types       
-3.2 Obtaining the data of economic damages  
-3.3.Tidy data
-4. Resuts  
-4.1 Most harmful Meteorological events with respect to population health
-4.2 Meteorological events with the greatest economic consequences
+2. Data processing
+2.1 Getting the raw data  
+2.2 Cleaning the event types       
+2.3 Obtaining the data of economic damages  
+2.4 Tidy data
+3. Results  
+3.1 Most harmful Meteorological events for population health   
+3.2 Meteorological events with the greatest economic consequences
 
+## **1 Summary of the analysis**
+
+Taking into account the budget constraints of the local governments, the policies for mitigation and prevention of natural disasters need to prioritize the spending in the meteorological events that have the highest probability of causing harm to the population. The aim of the present data analysis point toward this challenge.
+
+Using the *U.S. National Oceanic and Atmospheric Administration´s (NOAA) storm database* it will be determined which types of meteorological events are the most harmful to the population health and which types events cause the greatest  economic consequences.
+
+To achievethis objective, it is necessary to process the database. The second part of the analysis explains all the challenges that have the database and the solutions that were implemented. Finally, in the third part are presented circular bar plots that help to visualize the economic and health consequences of each meteorological events.
+
+## **2. Data processing**   
+
+This data analysis uses 6 R packages. In order to reproduce it, please install and call them. 
 
 ```{r libraries , warning= FALSE, results='hide', message = FALSE, echo=TRUE}
 
@@ -38,7 +49,9 @@ library(gridExtra)
 
 ```
 
+### **2.1 Getting the raw data**
 
+The following code read the raw database. Cause the data is compressed in a bz2 file it is required to use the bunzip2 function.
 
 ```{r raw_data , cache=TRUE , warning=TRUE, results='hide', echo=TRUE}
 fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
@@ -47,13 +60,16 @@ bunzip2("Storm Data.bz2", destname = "Storm DataDes", remove = FALSE)
 data <- read.csv("Storm DataDES")
 ```
 
+### **2.2 Cleaning the event types**       
 
+For simplicity we will select only the variables that are relevant for the analysis.
 
 ```{r select_data,  warning=TRUE, results='hide', echo=TRUE}
 SelectedData <- data %>% select(STATE__,BGN_DATE,EVTYPE,FATALITIES,INJURIES,
                                 PROPDMG,PROPDMGEXP,CROPDMG, CROPDMGEXP)
 ```
 
+The most significant challenge in the raw database is the number of meteorological events. According to the NOAA documentation, there are 48 types of events, but we can see in the raw database that there are near one thousand.
 
 ```{r problem_EVTYPE,  warning=TRUE, echo=TRUE}
 
@@ -61,6 +77,9 @@ length(unique(SelectedData$EVTYPE))
 
 ```
 
+This is caused mostly by typos. But also because the categorization into 48 types only began in the last years of the database. Before this categorization, it is common to find specific categories that then disappear 
+
+For this reason, it is interesting to see the number of types of meteorological events  each year. The following code chunk helps us in this mission. 
 
 ```{r dates,  warning=TRUE, echo=TRUE}
 splitNames <- strsplit(data$BGN_DATE,"\\ ")
@@ -71,17 +90,21 @@ numEventsyears <- sapply(splityears, function(x){length(unique(x[[3]]))})
 numEventsyears
 ```
 
-
+As we can see, until 1993 the NOAA database only register 3 types. Since the objective of the analysis is to compare the effects of different weather events we can rid out of these initial years.
 
 ```{r good_dates,  warning=TRUE, results='hide', echo=TRUE}
 SelectedData9311 <- filter(SelectedData, BGN_DATE > 1992)
 ```
 
-
 ```{r problem_EVTYPE2, echo=TRUE}
 length(unique(SelectedData9311$EVTYPE))
 ```
 
+Despite we get a better database to approach the objective, the problem of the wrong categorization prevails. 
+
+To deal with this problem the *amatch* function of the stringdist package was used. This function  "map" all the types of events of the raw database to the official 48 types.
+
+In order to optimize the utility of this function, first is needed to make some corrections to the original events. 1) transform the to lower case letter 2) fix some names that are not well recognized by the amatch function
 
 ```{r solution, echo=TRUE}
 
@@ -109,6 +132,7 @@ SelectedData9311 <- SelectedData9311[!grepl("late|unseason(.*)|prolong|mudslide|
 
 ```
 
+Also, it is needed to create a vector with the official 48 types of events. This vector will be used in the *amatch* function.
 
 ```{r solution1, echo=TRUE}
 categories <- c("Astronomical Low Tide", "Avalanche", "Blizzard", "Coastal Flood",
@@ -126,23 +150,9 @@ categories <- c("Astronomical Low Tide", "Avalanche", "Blizzard", "Coastal Flood
 categories <- tolower(categories)
 ```
 
-```{r solution2, echo=TRUE}
-categories <- c("Astronomical Low Tide", "Avalanche", "Blizzard", "Coastal Flood",
-                "Cold/Wind Chill", "Debris Flow",  "Dense Fog", "Dense Smoke","Drought",
-                "Dust Devil", "Dust Storm","Excessive Heat","Extreme Cold/Wind Chill",
-                "Flash Flood","Flood","Frost/Freeze","Funnel Cloud", "Freezing Fog", 
-                "Hail","Heat" ,"Heavy Rain", "Heavy Snow" ,"High Surf" ,"High Wind",
-                "Hurricane/Typhoon","Ice Storm","Lake-Effect Snow","Lakeshore Flood",
-                "Lightning" ,"Marine Hail","Marine High Wind","Marine Strong Wind",
-                "Marine Thunderstorm Wind","Rip Current","Seiche","Sleet","Storm Surge/Tide",
-                "Strong Wind","Thunderstorm Wind","Tornado","Tropical Depression",
-                "Tropical Storm","Tsunami","Volcanic Ash","Waterspout","Wildfire", 
-                "Winter Storm","Winter Weather")
+Now that the inputs are ready, it´s time for the *amatch* function. 
 
-categories <- tolower(categories)
-
-```
-
+Note that it is used the method "jw" (Jaro distance). After some experiments with the other methods, the "jw" was the better performing,  
 
 ```{r solution3, echo=TRUE, cache=TRUE}
 SelectedData9311$TYPE <- sapply(SelectedData9311$EVTYPE, function(x){
@@ -152,7 +162,15 @@ SelectedData9311$TYPE <- sapply(SelectedData9311$EVTYPE, function(x){
 ) 
 ```
 
+The result was a vector with the best matched official type of event. This depurate vector will be used henceforth. 
 
+**limitations of the analysis**: it is probable that some wrongly  matching occurred.
+
+### **2.3 Obtaining the data of economic damages** 
+
+to obtain the two most important variables for the economic part of the analysis (value of the crop damage, value of the property damage), Some transformations to the raw database were required.
+
+There were two columns that contain letters symbolizing the exponent values of the monetary damages. After the recategorization of those columns to numbers, it was possible to multiply and obtain the value of the crop and property damages.
 
 ```{r economic_part, echo=TRUE}
 
@@ -178,6 +196,15 @@ SelectedData9311$TotalDamage <- SelectedData9311$PropDamage + SelectedData9311$C
 
 ```
 
+Finally, the crop and the property damages were summed, obtaining the total economic damage of each individual event.  
+
+
+### **2.4 Tidy data**  
+
+With the processed raw data was possible to make a tidy database. 
+
+In this database, each row represents one of the 48 official types of meteorological events. The columns contain the total number of injuries, fatalities, and economic damage caused by each of the types of events.
+
 
 ```{r get_tidy,  echo=TRUE}
 
@@ -188,6 +215,11 @@ tidyData <- SelectedData9311 %>%  group_by(TYPE)  %>%
 ```
 
 
+Now we are ready to approach the objective of the data analysis.
+
+## **3. Results**  
+
+### **3.1 Most harmful Meteorological events for population health**   
 
 ```{r results1,  echo=TRUE,  fig.align='center', fig.width= 10, fig.height = 7}
 # Injuries
@@ -266,7 +298,7 @@ grid.arrange(arrangeGrob(p, top = "Total number of injuries caused by each of th
 
 ```
 
-
+### **3.2 Meteorological events with the greatest economic consequences**
 
 ```{r results2,  echo=TRUE,  fig.align='center', fig.height = 9}
 
