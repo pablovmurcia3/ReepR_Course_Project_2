@@ -1,17 +1,17 @@
 
 
 
-**Reproducible Research: Evaluating the most harmful and destructive types meteorological events**
+**Reproducible Research: Evaluating the most harmful and destructive types of meteorological events**
 ========================
 
-*Pablo Velásquez Murcia*      
+*Pablo V.M*      
 *`r Sys.Date()`*
 
 ## **Index**
 
-1. Summary of the analysis   
-2. Data processing
-2.1 Getting the raw data  
+1. Summary of the analysis     
+2. Data processing    
+2.1 Getting the raw data   
 2.2 Cleaning the event types       
 2.3 Obtaining the data of economic damages  
 2.4 Tidy data
@@ -23,9 +23,9 @@
 
 Taking into account the budget constraints of the local governments, the policies for mitigation and prevention of natural disasters need to prioritize the spending in the meteorological events that have the highest probability of causing harm to the population. The aim of the present data analysis point toward this challenge.
 
-Using the *U.S. National Oceanic and Atmospheric Administration´s (NOAA) storm database* it will be determined which types of meteorological events are the most harmful to the population health and which types events cause the greatest  economic consequences.
+Using the *U.S. National Oceanic and Atmospheric Administration´s (NOAA) storm database* it was determined which types of meteorological events are the most harmful to the population health and which types of events cause the greatest  economic consequences.
 
-To achievethis objective, it is necessary to process the database. The second part of the analysis explains all the challenges that have the database and the solutions that were implemented. Finally, in the third part are presented circular bar plots that help to visualize the economic and health consequences of each meteorological events.
+To achieve this objective, it was necessary to process the database. The second part of the analysis explains all the challenges that have the database and the solutions that were implemented. Finally, in the third part are presented circular bar plots that help to visualize the economic and health consequences of each type of meteorological event.
 
 ## **2. Data processing**   
 
@@ -51,7 +51,7 @@ library(gridExtra)
 
 ### **2.1 Getting the raw data**
 
-The following code read the raw database. Cause the data is compressed in a bz2 file it is required to use the bunzip2 function.
+The following code read the raw database. Cause the data was compressed in a bz2 file, it was required to use the bunzip2 function.
 
 ```{r raw_data , cache=TRUE , warning=TRUE, results='hide', echo=TRUE}
 fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
@@ -62,14 +62,14 @@ data <- read.csv("Storm DataDES")
 
 ### **2.2 Cleaning the event types**       
 
-For simplicity we will select only the variables that are relevant for the analysis.
+For simplicity, were selected only the variables that are relevant for the analysis.
 
 ```{r select_data,  warning=TRUE, results='hide', echo=TRUE}
 SelectedData <- data %>% select(STATE__,BGN_DATE,EVTYPE,FATALITIES,INJURIES,
                                 PROPDMG,PROPDMGEXP,CROPDMG, CROPDMGEXP)
 ```
 
-The most significant challenge in the raw database is the number of meteorological events. According to the NOAA documentation, there are 48 types of events, but we can see in the raw database that there are near one thousand.
+The most significant challenge in the raw database was the number of meteorological events. According to the NOAA documentation, there are 48 types of events, but we can see in the raw database that there are near one thousand.
 
 ```{r problem_EVTYPE,  warning=TRUE, echo=TRUE}
 
@@ -77,7 +77,7 @@ length(unique(SelectedData$EVTYPE))
 
 ```
 
-This is caused mostly by typos. But also because the categorization into 48 types only began in the last years of the database. Before this categorization, it is common to find specific categories that then disappear 
+This is caused mostly by typos. But also because the categorization into 48 types only began in the last years of the database. Before this categorization, it is common to find specific categories that then disappear.
 
 For this reason, it is interesting to see the number of types of meteorological events  each year. The following code chunk helps us in this mission. 
 
@@ -90,7 +90,7 @@ numEventsyears <- sapply(splityears, function(x){length(unique(x[[3]]))})
 numEventsyears
 ```
 
-As we can see, until 1993 the NOAA database only register 3 types. Since the objective of the analysis is to compare the effects of different weather events we can rid out of these initial years.
+As we can see, until 1993 the NOAA database only registers 3 types. Since the objective of the analysis is to compare the effects of different weather events we can rid out of these initial years.
 
 ```{r good_dates,  warning=TRUE, results='hide', echo=TRUE}
 SelectedData9311 <- filter(SelectedData, BGN_DATE > 1992)
@@ -132,7 +132,7 @@ SelectedData9311 <- SelectedData9311[!grepl("late|unseason(.*)|prolong|mudslide|
 
 ```
 
-Also, it is needed to create a vector with the official 48 types of events. This vector will be used in the *amatch* function.
+Also, it was needed to create a vector with the official 48 types of events.
 
 ```{r solution1, echo=TRUE}
 categories <- c("Astronomical Low Tide", "Avalanche", "Blizzard", "Coastal Flood",
@@ -150,9 +150,9 @@ categories <- c("Astronomical Low Tide", "Avalanche", "Blizzard", "Coastal Flood
 categories <- tolower(categories)
 ```
 
-Now that the inputs are ready, it´s time for the *amatch* function. 
+Now that the inputs are ready, it was time for the *amatch* function. 
 
-Note that it is used the method "jw" (Jaro distance). After some experiments with the other methods, the "jw" was the better performing,  
+Note that it was used the method "jw" (Jaro distance). After some experiments with the other methods, the "jw" was the better performing,  
 
 ```{r solution3, echo=TRUE, cache=TRUE}
 SelectedData9311$TYPE <- sapply(SelectedData9311$EVTYPE, function(x){
@@ -162,15 +162,17 @@ SelectedData9311$TYPE <- sapply(SelectedData9311$EVTYPE, function(x){
 ) 
 ```
 
-The result was a vector with the best matched official type of event. This depurate vector will be used henceforth. 
+The result was a vector with the best matched official type of event.
 
-**limitations of the analysis**: it is probable that some wrongly  matching occurred.
+**limitations of the analysis**: it is probable that some wrongly matching occurred.
 
 ### **2.3 Obtaining the data of economic damages** 
 
-to obtain the two most important variables for the economic part of the analysis (value of the crop damage, value of the property damage), Some transformations to the raw database were required.
+Some transformations to the raw database were required to obtain the two most important variables for the economic part of the analysis (value of the crop damage, value of the property damage).
 
-There were two columns that contain letters symbolizing the exponent values of the monetary damages. After the recategorization of those columns to numbers, it was possible to multiply and obtain the value of the crop and property damages.
+In the raw dataset two columns  contain letters symbolizing the exponent values of the monetary damages. After the recategorization of those columns to numbers, it was possible to multiply and obtain the value of the crop and property damages.
+
+Finally, the crop and the property damages were summed, obtaining the total economic damage of each event.  
 
 ```{r economic_part, echo=TRUE}
 
@@ -196,8 +198,6 @@ SelectedData9311$TotalDamage <- SelectedData9311$PropDamage + SelectedData9311$C
 
 ```
 
-Finally, the crop and the property damages were summed, obtaining the total economic damage of each individual event.  
-
 
 ### **2.4 Tidy data**  
 
@@ -214,16 +214,21 @@ tidyData <- SelectedData9311 %>%  group_by(TYPE)  %>%
 
 ```
 
-
 Now we are ready to approach the objective of the data analysis.
 
 ## **3. Results**  
 
-### **3.1 Most harmful Meteorological events for population health**   
+### **3.1 Most harmful types of meteorological events for population health** 
 
-```{r results1,  echo=TRUE,  fig.align='center', fig.width= 10, fig.height = 7}
+A circular barplot helps to visualize the types of meteorological events that have the greatest consequences in terms of population health. The variables used were the total number of injuries and the total number of fatalities of each type of meteorological event in the years between 1993 - 2011.
+
+The following code chunk prepares the plots for both variables.
+```{r results1,  echo=TRUE,  fig.align='center', fig.width= 10, fig.height = 9}
+########################################################################################
+
 # Injuries
 
+# ----------------------------------------------------- #
 tidyInjuries <- arrange(tidyData,desc(SumInjuries))  %>% 
   mutate(SumInjuries = SumInjuries/320) %>%
   mutate(id = 1:nrow(tidyData))
@@ -233,14 +238,13 @@ tidyInjuries <- cbind(x, tidyInjuries)
 tidyInjuries$TYPE <- paste(tidyInjuries$TYPE, tidyInjuries$x)
 tidyInjuries$TYPE <- gsub("NA","", tidyInjuries$TYPE)
 
-# ----- ----------------------------------------------- #
+# ----------------------------------------------------- #
 label_data <- tidyInjuries
 number_of_bar <- nrow(label_data)
 angle <-  90 - 360 * (label_data$id-0.5) /number_of_bar 
 label_data$hjust<-ifelse( angle < -90, 1, 0)
 label_data$angle<-ifelse(angle < -90, angle+180, angle)
 # ----- ------------------------------------------- ---- #
-
 p <- ggplot(tidyInjuries, aes(x = as.factor(id), y = SumInjuries)) +
   geom_bar(stat="identity", fill=alpha("red", 0.3)) +
   ylim(-100,120) +
@@ -256,8 +260,7 @@ p <- ggplot(tidyInjuries, aes(x = as.factor(id), y = SumInjuries)) +
             aes(x=id, y=SumInjuries+10, label=TYPE, hjust=hjust), color="black", 
             fontface="bold",alpha=0.6, size=3, angle= label_data$angle,
             inherit.aes = FALSE ) 
-
-
+########################################################################################
 
 # Fatalities
 
@@ -270,7 +273,7 @@ tidyFatalities <- cbind(x, tidyFatalities)
 tidyFatalities$TYPE <- paste(tidyFatalities$TYPE, tidyFatalities$x)
 tidyFatalities$TYPE <- gsub("NA","", tidyFatalities$TYPE)
 
-# ----- ------------------------------------------------ #
+# ------------------------------------------------------ #
 label_data <- tidyFatalities
 number_of_bar <- nrow(label_data)
 angle <-  90 - 360 * (label_data$id-0.5) /number_of_bar 
@@ -294,13 +297,29 @@ p1 <- ggplot(tidyFatalities, aes(x = as.factor(id), y = SumFatalities)) +
             color="black", fontface="bold",alpha=0.6, size=3, 
             angle= label_data$angle, inherit.aes = FALSE ) 
 
-grid.arrange(arrangeGrob(p, top = "Total number of injuries caused by each of the 48 \nofficial event type (1993-2011)"), arrangeGrob(p1, top = "Total number of fatlities caused by each of the 48  \nofficial event type (1993-2011)"), ncol=2)
+grid.arrange(arrangeGrob(p, top = "Total number of injuries caused by each of the 48 \nofficial event types (1993-2011)"), arrangeGrob(p1, top = "Total number of fatlities caused by each of the 48  \nofficial event types (1993-2011)"), ncol=2)
 
 ```
 
-### **3.2 Meteorological events with the greatest economic consequences**
+As  was expected, there is a correlation between the variables; the types of meteorological events that cause most of the injuries are the ones that cause most of the fatalities. 
+
+In this sense, it is easy to determine that the types of meteorological events that are most harmful to population health are:
+
+* Excessive heat
+* Tornado
+* Heat
+* Flash flood
+* Flood
+* lightning
+* Thunderstorm wind
+
+
+### **3.2 Types of meteorological events with the greatest economic consequences**
+
+A circular barplot was also used to visualize the types of meteorological events that have the greatest economic consequences. The variable used was the monetary value of the economic damages (sum of the crop and property damages)
 
 ```{r results2,  echo=TRUE,  fig.align='center', fig.height = 9}
+#####################################################################
 
 # Economic Damages  
 
@@ -320,9 +339,8 @@ label_data$hjust<-ifelse( angle < -90, 1, 0)
 label_data$angle<-ifelse(angle < -90, angle+180, angle)
 # ----- ------------------------------------------- ---- #
 
-
 p <- ggplot(tidyDamages, aes(x = as.factor(id), y = SumTotalDamages)) +
-  geom_bar(stat="identity", fill=alpha("blue", 0.3)) +
+  geom_bar(stat="identity", fill=alpha("green", 0.3)) +
   ylim(-100,120) +
   theme_minimal() +
   theme(
@@ -337,6 +355,21 @@ p <- ggplot(tidyDamages, aes(x = as.factor(id), y = SumTotalDamages)) +
             color="black", fontface="bold",alpha=0.6, size=3, 
             angle= label_data$angle, inherit.aes = FALSE ) 
 
-grid.arrange(arrangeGrob(p, top = "Total economic damage ($) caused by each of the 48 \nofficial event type (1993-2011)"))
+grid.arrange(arrangeGrob(p, top = "Total economic damage ($) caused by each of the 48 \nofficial event types (1993-2011)"))
 
 ```
+
+It is determined that the types of meteorological events with the  greatest economic consequences are:
+
+* Flood
+* Hurricane/Typhoon
+* Storm Surge/Tide
+* Tornado
+* Flash flood
+* Hail
+* Drought
+
+
+
+
+
